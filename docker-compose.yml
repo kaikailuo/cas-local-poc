@@ -11,7 +11,7 @@ services:
     environment:
       JVM_MEM_OPTS: "-Xms512m -Xmx2048m"
     ports:
-      - "8443:8443"
+      - "127.0.0.1:8443:8443"
     volumes:
       - ./config/cas.properties:/etc/cas/config/cas.properties:ro
       - ./runtime/certs:/etc/cas/certs:ro
@@ -29,7 +29,7 @@ services:
       SERVICE_CERT: /certs/localhost.crt
       SERVICE_KEY: /certs/localhost.key
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     volumes:
       - ./runtime/certs:/certs:ro
     depends_on:

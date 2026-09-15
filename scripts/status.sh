@@ -12,15 +12,15 @@ printf '\nEndpoints:\n'
 printf '  CAS login:    %s/login\n' "${CAS_URL}"
 printf '  Test service: https://localhost:8081/\n'
 
-if curl -kfsS "${CAS_URL}/login" >/dev/null 2>&1; then
-  printf 'PASS: CAS login page is reachable over HTTPS.\n'
+if curl --cacert "${CA_CERT}" -fsS "${CAS_URL}/login" >/dev/null 2>&1; then
+  printf 'PASS: CAS login page is reachable; project CA trust and hostname verification succeeded.\n'
 else
   printf 'FAIL: CAS login page is not reachable.\n' >&2
   exit 1
 fi
 
-if curl -kfsS "https://localhost:8081/health" >/dev/null 2>&1; then
-  printf 'PASS: Test service is reachable.\n'
+if curl --cacert "${CA_CERT}" -fsS "https://localhost:8081/health" >/dev/null 2>&1; then
+  printf 'PASS: Test service is reachable; project CA trust and hostname verification succeeded.\n'
 else
   printf 'FAIL: Test service is not reachable.\n' >&2
   exit 1

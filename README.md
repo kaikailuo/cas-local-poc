@@ -44,13 +44,18 @@ CAS 8.0.x 官方资料：
 4. 构建极小的测试 Service 镜像并启动两个容器；
 5. 等待 CAS 和测试 Service 都真正可访问。
 
+Compose 只把 `8443` 和 `8081` 发布到宿主机的 `127.0.0.1`；容器内的监听地址仍供
+本项目 Compose 网络使用，不会主动把这两个端口发布到其他宿主机网络接口。
+
 访问地址：
 
 - CAS 登录页：<https://localhost:8443/cas/login>
 - 测试 Service：<https://localhost:8081/>
 
 浏览器会提示证书不受信任，因为它是脚本生成的本地自签名证书。确认目标确实为
-`localhost` 后可仅为本地测试继续访问。私钥不会被 Git 跟踪。
+`localhost` 后可仅为本地测试继续访问。脚本不会把证书安装到系统信任库；命令行
+健康检查和协议回归通过 `curl --cacert runtime/certs/localhost.crt` 仅显式信任本项目
+证书，同时保留正常的 hostname 校验。私钥不会被 Git 跟踪。
 
 测试用户名默认为 `casuser`，密码查看本地 `.env`：
 
@@ -106,12 +111,41 @@ docker compose logs -f test-service
 
 ## 配置方式
 
+### 当前默认 runtime
+
+`./scripts/start.sh` 的实际运行链路是：
+
+```text
+docker-compose.yml
+  -> cas/Dockerfile.runtime
+  -> 官方 apereo/cas:8.0.1 runtime image
+```
+
+默认启动不会构建本仓库的完整 WAR Overlay。CAS 主要通过 `config/cas.properties`、
+`.env` 和 `runtime/certs/` 配置；test-service 仍是 Python 标准库实现的最小 CAS
+Client。
+
 非敏感 CAS 设置在 `config/cas.properties`。密码和 Webflow/TGC 加密签名密钥只在
-`.env` 中，通过 Spring 环境变量占位符注入。当前服务注册使用官方 WAR 内置的
-HTTPS 示例定义并导入内存注册表，重启时重新初始化；这适合本地 POC，不是生产方案。
+`.env` 中，通过 Spring 环境变量占位符注入。`.env` 是受 Git 忽略的本地明文配置，
+`start.sh` 会把权限统一为 `600`，不会改写已有值。脚本目前以 Bash `source` 读取
+`.env`；这个 Local POC 不引入额外 dotenv 依赖，因此值应只使用普通安全字符，不要
+填写命令或 Bash 表达式。
+
+当前服务注册依赖 `cas.service-registry.core.init-from-json=true`，将官方 WAR 内置的
+HTTPS 示例 Service 导入内存注册表，重启时重新初始化；这适合本地 POC，不是生产
+方案。
+
+### 为未来扩展保留的 Overlay
+
+`cas/` 中的 `Dockerfile`、Gradle 配置和 `src/` 是下一阶段扩展的 Overlay 基线。
+只有需要 JSON Service Registry、LDAP、JDBC、自定义认证模块或其他 CAS module 时，
+才切换 Compose 使用 `cas/Dockerfile` 来构建自己的 WAR Overlay；当前阶段不直接使用
+这些文件启动 CAS。
 
 `config/services/LocalTestService-1000.json` 是下一阶段切换到 Overlay 的显式服务
-定义。启用它时，使用 `cas/Dockerfile` 构建包含
+定义，匹配 `^https://localhost:8081/.*`。该目录当前没有挂载到默认 runtime，JSON
+文件现在不生效，也没有和官方示例 Service 同时生效。未来启用它时，使用
+`cas/Dockerfile` 构建包含
 `cas-server-support-json-service-registry` 的 Overlay，并把该目录挂载到 CAS 后配置
 `cas.service-registry.json.location=file:/etc/cas/services`。
 
@@ -138,4 +172,3 @@ rm -r runtime
 重新设计。
 
 本次实际遇到的故障见 [docs/troubleshooting.md](docs/troubleshooting.md)。
-

@@ -6,6 +6,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${PROJECT_DIR}/.env"
 CAS_URL="https://localhost:8443/cas"
 SERVICE_URL="https://localhost:8081/callback"
+CA_CERT="${PROJECT_DIR}/runtime/certs/localhost.crt"
 
 die() {
   printf 'FAIL: %s\n' "$*" >&2

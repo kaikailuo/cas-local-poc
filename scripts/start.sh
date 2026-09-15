@@ -30,6 +30,10 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   printf 'Created local-only .env with a generated password for casuser.\n'
 fi
 
+# Also protect an existing .env copied manually from .env.example. This changes
+# only its file mode; existing credentials and other values remain untouched.
+chmod 600 "${ENV_FILE}"
+
 for secret_spec in \
   'CAS_TEST_PASSWORD 18' \
   'CAS_KEYSTORE_PASSWORD 24' \
@@ -52,8 +56,8 @@ compose up -d --build
 
 printf 'Waiting for CAS login page'
 for attempt in $(seq 1 120); do
-  if curl -kfsS "${CAS_URL}/login" >/dev/null 2>&1; then
-    if curl -kfsS "https://localhost:8081/health" >/dev/null 2>&1; then
+  if curl --cacert "${CA_CERT}" -fsS "${CAS_URL}/login" >/dev/null 2>&1; then
+    if curl --cacert "${CA_CERT}" -fsS "https://localhost:8081/health" >/dev/null 2>&1; then
       printf '\nCAS and test service are ready.\n'
       printf 'CAS:          %s/login\n' "${CAS_URL}"
       printf 'Test service: https://localhost:8081/\n'
