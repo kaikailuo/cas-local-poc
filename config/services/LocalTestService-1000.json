@@ -1,0 +1,8 @@
+{
+  "@class": "org.apereo.cas.services.CasRegisteredService",
+  "serviceId": "^https://localhost:8081/.*",
+  "name": "CAS Local POC Test Service",
+  "description": "Local-only service used to verify CAS login and ticket validation.",
+  "id": 1000,
+  "evaluationOrder": 1
+}

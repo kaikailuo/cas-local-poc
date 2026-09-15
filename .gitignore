@@ -1,0 +1,17 @@
+.env
+.DS_Store
+
+# Local runtime material (certificates, private keys, logs)
+runtime/
+
+# CAS/Gradle build output and caches
+cas/.gradle/
+cas/build/
+cas/target/
+cas/*.war
+*.log
+
+# Python caches
+__pycache__/
+*.py[cod]
+

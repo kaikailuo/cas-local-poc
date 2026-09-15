@@ -1,0 +1,36 @@
+name: cas-local-poc
+
+services:
+  cas:
+    build:
+      context: ./cas
+      dockerfile: Dockerfile.runtime
+    image: cas-local-poc/cas:8.0.1
+    env_file:
+      - .env
+    environment:
+      JVM_MEM_OPTS: "-Xms512m -Xmx2048m"
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./config/cas.properties:/etc/cas/config/cas.properties:ro
+      - ./runtime/certs:/etc/cas/certs:ro
+      - ./runtime/logs:/var/log
+
+  test-service:
+    build:
+      context: ./service
+    image: cas-local-poc/test-service:1.0
+    environment:
+      CAS_PUBLIC_URL: https://localhost:8443/cas
+      CAS_INTERNAL_URL: https://cas:8443/cas
+      SERVICE_URL: https://localhost:8081/callback
+      CAS_CA_CERT: /certs/localhost.crt
+      SERVICE_CERT: /certs/localhost.crt
+      SERVICE_KEY: /certs/localhost.key
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./runtime/certs:/certs:ro
+    depends_on:
+      - cas

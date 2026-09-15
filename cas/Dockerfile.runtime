@@ -1,0 +1,5 @@
+# The official image is itself generated from an Apereo CAS WAR Overlay.
+# Pin the patch version: never use `latest` in this POC.
+FROM apereo/cas:8.0.1@sha256:de7367de6af5e5cce757f295588817cd8e900b1522ca1de2999e32ac0b2c6481
+
+LABEL org.opencontainers.image.title="CAS 8.0.1 Local POC"

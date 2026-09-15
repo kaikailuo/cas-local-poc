@@ -1,0 +1,141 @@
+# Apereo CAS 8.0.1 Local POC
+
+这是一个可重复运行的本地 CAS 实验环境。默认路径使用 Apereo 发布的
+`apereo/cas:8.0.1` 官方镜像；该镜像本身由 CAS WAR Overlay 生成。仓库同时保留
+`cas/` Overlay 工程，供下一阶段增加 JSON Registry、LDAP 等模块时使用，但日常
+POC 启动不需要在本机下载整套 Maven 依赖。
+
+已实测的链路：
+
+```text
+测试用户认证 -> CAS session/TGT (TGC cookie) -> Service Ticket
+             -> /serviceValidate -> 测试 Service 得到 casuser
+```
+
+## 版本与依赖
+
+- CAS Server：`8.0.1`（镜像 tag 与 multi-arch digest 均锁定）
+- CAS 容器：Java `25.0.3`、Spring Boot `4.1.0`、Jetty `12.1.11`
+- Overlay Wrapper：Gradle `9.6.1`，Java 基线 `25`
+- 本机需要：Docker Desktop、Docker Compose、curl、OpenSSL、Git
+- 本机不需要安装 Java 或 Gradle；官方文档说明 Overlay 自带 Wrapper，默认运行
+  又完全位于容器中
+
+CAS 8.0.x 官方资料：
+
+- [Installation Requirements](https://apereo.github.io/cas/8.0.x/planning/Installation-Requirements.html)
+- [Docker Installation](https://apereo.github.io/cas/8.0.x/installation/Docker-Installation.html)
+- [WAR Overlay Initializr](https://apereo.github.io/cas/8.0.x/installation/WAR-Overlay-Initializr.html)
+- [JSON Service Registry](https://apereo.github.io/cas/8.0.x/services/JSON-Service-Management.html)
+
+## 首次启动
+
+确认 Docker Desktop 已运行，然后执行：
+
+```bash
+./scripts/start.sh
+```
+
+首次运行会：
+
+1. 检查 Docker、Compose、curl 和 OpenSSL；
+2. 创建 git 忽略的 `.env`，随机生成测试密码、keystore 密码和 CAS 会话密钥；
+3. 在 `runtime/certs/` 生成 localhost 自签名证书与 PKCS#12 keystore；
+4. 构建极小的测试 Service 镜像并启动两个容器；
+5. 等待 CAS 和测试 Service 都真正可访问。
+
+访问地址：
+
+- CAS 登录页：<https://localhost:8443/cas/login>
+- 测试 Service：<https://localhost:8081/>
+
+浏览器会提示证书不受信任，因为它是脚本生成的本地自签名证书。确认目标确实为
+`localhost` 后可仅为本地测试继续访问。私钥不会被 Git 跟踪。
+
+测试用户名默认为 `casuser`，密码查看本地 `.env`：
+
+```bash
+grep '^CAS_TEST_' .env
+```
+
+不要提交或分享 `.env`。
+
+## 日常操作
+
+```bash
+./scripts/start.sh
+./scripts/status.sh
+./scripts/test-cas.sh
+./scripts/stop.sh
+```
+
+- `start.sh` 可重复执行；保留已有账号、密钥和证书。
+- `status.sh` 显示容器、端口和两个 HTTPS 端点的实际状态。
+- `test-cas.sh` 无破坏地提交真实 CAS 登录 Webflow，检查 TGC，签发并验证两张
+  不同的 ST，同时确认已消费的 ST 不能重放。
+- `stop.sh` 停止并删除容器与 POC 网络，保留镜像、`.env`、证书和日志。
+
+手工浏览器验证时访问测试 Service，它会跳转到 CAS；用 `.env` 中的账号登录后，
+CAS 回跳 `/callback?ticket=ST-...`，测试 Service 调用 CAS `serviceValidate`，页面最终
+显示认证用户名。
+
+## 目录
+
+```text
+.
+├── cas/                    # 官方 WAR Overlay 基线与固定 8.0.1 配置
+│   ├── Dockerfile          # 可选：从 Overlay 构建完整 CAS 镜像
+│   └── Dockerfile.runtime  # 默认：基于官方 8.0.1 已发布镜像
+├── config/
+│   ├── cas.properties      # 无硬编码密码的 CAS 本地配置
+│   └── services/           # 下一阶段 Overlay JSON Registry 的服务定义
+├── service/                # 仅用 Python 标准库的 CAS 测试客户端
+├── scripts/                # start/status/test/stop 与证书脚本
+├── docs/troubleshooting.md
+├── docker-compose.yml
+├── .env.example
+└── runtime/                # 本地证书、私钥、keystore、CAS 日志；Git 忽略
+```
+
+CAS 文件日志位于 `runtime/logs/cas.log`、`runtime/logs/cas_audit.log`；容器日志：
+
+```bash
+docker compose logs -f cas
+docker compose logs -f test-service
+```
+
+## 配置方式
+
+非敏感 CAS 设置在 `config/cas.properties`。密码和 Webflow/TGC 加密签名密钥只在
+`.env` 中，通过 Spring 环境变量占位符注入。当前服务注册使用官方 WAR 内置的
+HTTPS 示例定义并导入内存注册表，重启时重新初始化；这适合本地 POC，不是生产方案。
+
+`config/services/LocalTestService-1000.json` 是下一阶段切换到 Overlay 的显式服务
+定义。启用它时，使用 `cas/Dockerfile` 构建包含
+`cas-server-support-json-service-registry` 的 Overlay，并把该目录挂载到 CAS 后配置
+`cas.service-registry.json.location=file:/etc/cas/services`。
+
+## 完全重置
+
+下面会删除本地账号密码、私钥、证书和日志，且不可恢复：
+
+```bash
+./scripts/stop.sh
+docker compose down --rmi local --volumes --remove-orphans
+rm .env
+rm -r runtime
+```
+
+下次执行 `./scripts/start.sh` 会生成全新的本地材料。Docker 的全局 BuildKit 缓存
+不属于本项目，重置命令不会清理它。
+
+## 下一阶段
+
+接入真实认证源时从 `cas/build.gradle` 增加官方模块开始，切换 Compose 到
+`cas/Dockerfile` Overlay 构建，再在 `config/cas.properties` 加最小 LDAP/JDBC
+配置。首先关闭静态测试认证：`cas.authn.accept.enabled=false`。不要在此基础上直接
+当作生产配置；证书、Service Registry、ticket registry、密钥管理和高可用策略都需
+重新设计。
+
+本次实际遇到的故障见 [docs/troubleshooting.md](docs/troubleshooting.md)。
+
