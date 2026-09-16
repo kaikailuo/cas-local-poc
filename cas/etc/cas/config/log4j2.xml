@@ -104,6 +104,9 @@ Set -Dlog4j2.contextSelector=org.apache.logging.log4j.core.selector.BasicContext
         <Logger name="org.apereo.services.persondir" level="${sys:cas.log.level}" />
         <Logger name="org.apereo.cas.web.flow" level="${sys:cas.log.level}" />
         <Logger name="org.apereo.cas.web.CasWebApplication" level="${sys:cas.log.level}"/>
+        <!-- Stage 3 evidence: record native X.509 subject/issuer policy matches
+             without enabling verbose logging for the entire CAS runtime. -->
+        <Logger name="org.apereo.cas.adaptors.x509.authentication.handler.support.X509CredentialsAuthenticationHandler" level="debug" />
 
         <Logger name="org.apereo.inspektr" additivity="false" level="info">
             <AppenderRef ref="casConsole"/>

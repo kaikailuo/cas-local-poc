@@ -191,3 +191,14 @@ docker compose -f docker-compose.x509.yml up -d --build
 truststore 导入成功只表示 Tomcat 已具备信任锚配置；真实 Jamf Device Certificate
 是否会被 Chrome 发送、是否能通过 Java/Tomcat TLS 校验，必须在 Stage 2B 由人工使用
 公司 Mac 上的 System Keychain Identity 验证。
+
+## Jamf Device Certificate Policy
+
+Stage 3 在已通过 TLS/Tomcat 信任验证的证书之上，使用 CAS 8.0.1 原生 X.509
+properties 增加 Jamf Device Certificate Subject、Issuer 与 KeyUsage policy。正式
+Subject 按 CAS 实际解析顺序约束为 `CN=<标准 UUID>, O=UMU`，Issuer 约束为
+`CN=UMU JSS Built-in Certificate Authority`；Principal 继续是完整 Subject DN。
+
+真实 Jamf certificate 的正式 policy 正向回归、Wrong Subject 反向测试与 Wrong
+Issuer 反向测试均已完成。详细证据、KeyUsage/EKU 边界与 revocation `NONE` 风险见
+[Stage 3 验收报告](docs/stage-3-x509-policy.md)。
