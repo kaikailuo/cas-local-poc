@@ -172,3 +172,22 @@ rm -r runtime
 重新设计。
 
 本次实际遇到的故障见 [docs/troubleshooting.md](docs/troubleshooting.md)。
+
+## 隔离的 Jamf X.509 TLS 准备
+
+Stage 2A 只为 `docker-compose.x509.yml` 的 Tomcat X.509 connector 准备服务端信任环境，
+不修改默认 `docker-compose.yml` / Jetty baseline。先从 macOS System Keychain 读取已知的
+`UMU JSS Built-in Certificate Authority` 公钥证书并创建独立 JKS truststore：
+
+```bash
+./scripts/prepare-jamf-truststore.sh
+docker compose -f docker-compose.x509.yml up -d --build
+```
+
+生成的 CA PEM、JKS truststore 以及随机密码分别保存在 git-ignored 的
+`runtime/certs/` 和 `.env` 中。专用 connector 继续使用 `client-auth=want`，因此 9443
+仍提供普通用户名密码登录，9444 负责可选客户端证书协商。
+
+truststore 导入成功只表示 Tomcat 已具备信任锚配置；真实 Jamf Device Certificate
+是否会被 Chrome 发送、是否能通过 Java/Tomcat TLS 校验，必须在 Stage 2B 由人工使用
+公司 Mac 上的 System Keychain Identity 验证。
