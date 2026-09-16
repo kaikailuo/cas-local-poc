@@ -1,0 +1,44 @@
+name: cas-local-poc-x509
+
+services:
+  cas:
+    build:
+      context: ./cas
+      dockerfile: Dockerfile
+      network: none
+      args:
+        BASE_IMAGE: apereo/cas:8.0.1@sha256:de7367de6af5e5cce757f295588817cd8e900b1522ca1de2999e32ac0b2c6481
+        EXT_BUILD_OPTIONS: --offline
+    image: cas-local-poc/cas-x509:8.0.1
+    pull_policy: never
+    env_file:
+      - .env
+    environment:
+      JVM_MEM_OPTS: "-Xms512m -Xmx2048m"
+    ports:
+      - "127.0.0.1:9443:8443"
+      - "127.0.0.1:9444:8444"
+    volumes:
+      - ./config/cas-x509.properties:/etc/cas/config/cas.properties:ro
+      - ./runtime/certs:/etc/cas/certs:ro
+      - ./runtime/logs-x509:/var/log
+
+  test-service:
+    build:
+      context: ./service
+      network: none
+    image: cas-local-poc/test-service:1.0
+    pull_policy: never
+    environment:
+      CAS_PUBLIC_URL: https://localhost:9443/cas
+      CAS_INTERNAL_URL: https://cas:8443/cas
+      SERVICE_URL: https://localhost:9081/callback
+      CAS_CA_CERT: /certs/localhost.crt
+      SERVICE_CERT: /certs/localhost.crt
+      SERVICE_KEY: /certs/localhost.key
+    ports:
+      - "127.0.0.1:9081:8081"
+    volumes:
+      - ./runtime/certs:/certs:ro
+    depends_on:
+      - cas
