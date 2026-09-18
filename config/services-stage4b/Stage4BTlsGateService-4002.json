@@ -1,0 +1,8 @@
+{
+  "@class": "org.apereo.cas.services.CasRegisteredService",
+  "serviceId": "^https://localhost:9082/callback.*",
+  "name": "Stage 4B TLS Device Gate Test Service",
+  "description": "Isolated Stage 4B service; no X.509 or required-handlers authentication policy.",
+  "id": 4002,
+  "evaluationOrder": 0
+}

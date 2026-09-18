@@ -1,0 +1,41 @@
+name: cas-local-poc-stage4b
+
+services:
+  cas:
+    build:
+      context: ./cas
+      dockerfile: Dockerfile
+      network: none
+      args:
+        BASE_IMAGE: apereo/cas:8.0.1@sha256:de7367de6af5e5cce757f295588817cd8e900b1522ca1de2999e32ac0b2c6481
+        EXT_BUILD_OPTIONS: --offline -PwithoutX509=true
+    image: cas-local-poc/cas-stage4b:8.0.1
+    pull_policy: never
+    env_file:
+      - .env
+    environment:
+      JVM_MEM_OPTS: "-Xms512m -Xmx2048m"
+    ports:
+      - "127.0.0.1:9445:8443"
+    volumes:
+      - ./config/cas-stage4b.properties:/etc/cas/config/cas.properties:ro
+      - ./config/services-stage4b:/etc/cas/services-stage4b:ro
+      - ./runtime/certs:/etc/cas/certs:ro
+      - ./runtime/logs-stage4b:/var/log
+
+  test-service:
+    image: cas-local-poc/test-service:1.0
+    pull_policy: never
+    environment:
+      CAS_PUBLIC_URL: https://localhost:9445/cas
+      CAS_INTERNAL_URL: http://cas:8080/cas
+      SERVICE_URL: https://localhost:9082/callback
+      CAS_CA_CERT: /certs/localhost.crt
+      SERVICE_CERT: /certs/localhost.crt
+      SERVICE_KEY: /certs/localhost.key
+    ports:
+      - "127.0.0.1:9082:8081"
+    volumes:
+      - ./runtime/certs:/certs:ro
+    depends_on:
+      - cas
